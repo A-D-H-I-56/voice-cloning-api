@@ -1,0 +1,34 @@
+# Web framework
+fastapi>=0.111.0
+uvicorn[standard]>=0.30.0
+
+# Async MongoDB driver
+motor>=3.4.0
+pymongo>=4.7.0
+
+# Data validation
+pydantic>=2.7.0
+pydantic-settings>=2.3.0
+
+# File upload support
+python-multipart>=0.0.9
+aiofiles>=23.2.0
+
+# PyTorch - pinned to compatible versions
+# MUST install from CPU index: https://download.pytorch.org/whl/cpu
+# (see Dockerfile for PyTorch installation)
+# Compatible with torch>=2.1 (required by coqui-tts 0.22.1)
+torch==2.1.2
+torchaudio==2.1.2
+
+# Coqui TTS - Pinned to v0.22.1 to match transformers 4.33.0
+coqui-tts==0.22.1
+
+# Core AI stack - Strictly pinned for compatibility
+transformers==4.33.0
+tokenizers==0.13.3
+numpy<2.0.0
+scipy
+
+# Environment variables
+python-dotenv>=1.0.0

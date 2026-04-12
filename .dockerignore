@@ -1,0 +1,50 @@
+# Virtual environment - never send to Docker build context (3 GB+)
+venv/
+.venv/
+
+# Persistent data - managed by volumes
+checkpoints/
+outputs/
+
+# Python cache
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+
+# Secrets - handled via environment variables at runtime
+.env
+.env.local
+.env.*.local
+.env.example
+
+# Documentation (not needed in image)
+*.md
+README.md
+DEPLOYMENT.md
+HF_SPACES_README.md
+
+# Editor / OS artifacts
+.vscode/
+.idea/
+*.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+.gitkeep
+
+# Testing
+.pytest_cache/
+.pytest_cache
+*.log
+
+# Wheel cache
+*.whl
+C:/tmp_wheels/
+
+# Node (if any)
+node_modules/
