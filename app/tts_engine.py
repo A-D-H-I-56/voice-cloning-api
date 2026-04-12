@@ -2,7 +2,8 @@
 TTS Engine — Singleton wrapper around the XTTS-v2 model.
 
 Design decisions:
-  - Loaded once at application startup via `tts_engine.load()`.
+  - Lazy loaded on first API request (not at startup) to support HF Spaces.
+  - Allows fast startup and immediate health checks.
   - A single ThreadPoolExecutor (max_workers=1) serialises all GPU/CPU calls
     so only one inference runs at a time and the async event loop is never blocked.
   - torch.inference_mode() reduces memory overhead during inference.
@@ -11,6 +12,7 @@ Design decisions:
 import asyncio
 import logging
 import os
+import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Optional, Tuple
@@ -28,17 +30,34 @@ class TTSEngine:
     def __init__(self) -> None:
         self._model = None
         self._device: Optional[str] = None
+        self._loading = False
 
     # ------------------------------------------------------------------
-    # Startup
+    # Lazy Loading (on first use, not at startup)
     # ------------------------------------------------------------------
 
-    def load(self) -> None:
-        """Load the XTTS-v2 model. Call once at application startup."""
+    def _ensure_loaded(self) -> None:
+        """Ensure model is loaded. Thread-safe for concurrent access."""
+        if self._model is not None:
+            return  # Already loaded
+
+        if self._loading:
+            # Wait for another thread to finish loading
+            while self._loading and self._model is None:
+                time.sleep(0.1)
+            return
+
+        self._loading = True
+        try:
+            self._load_model()
+        finally:
+            self._loading = False
+
+    def _load_model(self) -> None:
+        """Internal method to load the model."""
         from TTS.api import TTS  # deferred so import errors surface clearly
 
         # Auto-accept Coqui's non-commercial CPML licence.
-        # Set COQUI_TOS_AGREED=0 in .env to be prompted interactively instead.
         os.environ.setdefault("COQUI_TOS_AGREED", "1")
 
         self._device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -56,7 +75,7 @@ class TTSEngine:
         self, audio_path: str
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Return (gpt_cond_latent, speaker_embedding) for *audio_path*."""
-        self._assert_loaded()
+        self._ensure_loaded()  # Load if not already loaded
         with torch.inference_mode():
             gpt_cond_latent, speaker_embedding = (
                 self._model.synthesizer.tts_model.get_conditioning_latents(
@@ -73,7 +92,7 @@ class TTSEngine:
         speaker_embedding: torch.Tensor,
     ) -> torch.Tensor:
         """Run XTTS inference and return a 1-D float32 waveform tensor."""
-        self._assert_loaded()
+        self._ensure_loaded()  # Load if not already loaded
         with torch.inference_mode():
             out = self._model.synthesizer.tts_model.inference(
                 text=text,
@@ -158,16 +177,17 @@ class TTSEngine:
     # Internal
     # ------------------------------------------------------------------
 
-    def _assert_loaded(self) -> None:
-        if self._model is None:
-            raise RuntimeError(
-                "TTSEngine.load() has not been called. "
-                "Ensure it is invoked during application startup."
-            )
-
     @property
     def device(self) -> Optional[str]:
+        if self._device is None:
+            # If not yet loaded, detect device
+            return "cuda" if torch.cuda.is_available() else "cpu"
         return self._device
+
+    @property
+    def is_loaded(self) -> bool:
+        """Check if model is currently loaded."""
+        return self._model is not None
 
 
 # Module-level singleton — import this everywhere else.

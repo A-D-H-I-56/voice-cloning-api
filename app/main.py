@@ -39,14 +39,9 @@ async def lifespan(app: FastAPI):
     logger.info("Connecting to MongoDB at %s…", settings.mongo_uri[:50] + "...")
     await connect_db()
 
-    logger.info("Loading TTS model '%s'…", settings.tts_model)
-    # Auto-accept Coqui CPML licence — required when running non-interactively.
-    # The user's .env includes COQUI_TOS_AGREED=1; we also set it here because
-    # pydantic-settings does not propagate unknown keys into os.environ.
-    os.environ.setdefault("COQUI_TOS_AGREED", "1")
-    tts_engine.load()  # blocking, but happens before first request
-    logger.info("TTS model ready on device: %s", tts_engine.device)
-
+    # Model loads lazily on first API request (not at startup)
+    # This allows HF Spaces to start quickly without timeout
+    logger.info("TTS model will load on first API request (lazy loading)")
     logger.info("API is ready to accept requests")
     logger.info("========== STARTUP COMPLETE ==========\n")
 
