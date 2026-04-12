@@ -1,3 +1,13 @@
+---
+title: Voice Cloning API
+emoji: 🎤
+colorFrom: purple
+colorTo: blue
+sdk: docker
+app_file: app/main.py
+pinned: false
+---
+
 # Voice Cloning API
 
 A REST API for voice cloning and speech synthesis powered by [Coqui XTTS-v2](https://huggingface.co/coqui/XTTS-v2). Upload a short audio sample to create a voice clone, then synthesize speech in that voice with any text across multiple languages.
