@@ -66,13 +66,16 @@ WORKDIR /app
 # Copy application source only (no venv, no outputs, no checkpoints)
 COPY app/ ./app/
 
-# Pre-create persistent storage directories.
-# In production these are bind-mounted from the host via docker-compose,
-# so data written here survives container restarts and rebuilds.
-RUN mkdir -p checkpoints outputs
+# Pre-create persistent storage directories and setup permissions for Hugging Face Spaces (User 1000)
+RUN useradd -m -u 1000 user
+RUN mkdir -p checkpoints outputs && chown -R user:user /app checkpoints outputs
 
-EXPOSE 8000
+USER user
+ENV HOME=/home/user \
+    PATH=/home/user/.local/bin:$PATH
+
+EXPOSE 7860
 
 # Single worker — multiple workers would each load a copy of the model,
 # multiplying RAM/VRAM usage. Scale horizontally at the container level instead.
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7860", "--workers", "1"]
